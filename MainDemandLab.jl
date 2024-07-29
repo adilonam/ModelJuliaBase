@@ -55,7 +55,7 @@ DistanceM = Distance[(Schools.MarketId .== m) .& (Schools.Year .== y), Consumers
 CweightsMAll = Cweights.All[Consumers.MarketId .== m, 2, :]
 CweightsMTypes = Cweights.Types[Consumers.MarketId .== m, 2, :]
 
-include("./RC_shares.jl")
+include("./RC_shares3.jl")
 for m in markets
     for y in years
         DeltaM = filter(row -> row.MarketId == m && row.Year == y, Schools)[:, :Delta]

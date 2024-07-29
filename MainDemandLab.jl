@@ -55,7 +55,7 @@ DistanceM = Distance[(Schools.MarketId .== m) .& (Schools.Year .== y), Consumers
 CweightsMAll = Cweights.All[Consumers.MarketId .== m, 2, :]
 CweightsMTypes = Cweights.Types[Consumers.MarketId .== m, 2, :]
 
-
+include("./RC_shares.jl")
 for m in markets
     for y in years
         DeltaM = filter(row -> row.MarketId == m && row.Year == y, Schools)[:, :Delta]
@@ -63,14 +63,15 @@ for m in markets
         DistanceM = Distance[(Schools.MarketId .== m) .& (Schools.Year .== y), Consumers.MarketId .== m]
         CweightsMAll = Cweights.All[Consumers.MarketId .== m, 2, :]
         CweightsMTypes = Cweights.Types[Consumers.MarketId .== m, 2, :]
-        #Schools[Schools.MarketId .== m .& Schools.Year .== y, :Share] .= RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Estimation, Set, Params)
+        Schools[Schools.MarketId .== m .& Schools.Year .== y, :Share] .= RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Estimation, Set, Params, 10)
     end
 end
 
 # Clearing temporary variables
 nothing # This is the equivalent of `clear` in MATLAB, but Julia manages memory automatically
 
-Schools[:Delta] .= SolveShares(Delta0, Schools, Consumers, Distance, Cweights, Estimation, Set, Theta2)
+Schools[!, :Delta] .= SolveShares(Delta0, Schools, Consumers, Distance, Cweights, Estimation, Set, Theta2)
+
 
 
 

@@ -3,6 +3,8 @@
 
 # Run things on Sherlock (the Stanford-wide cluster)
 # Note: The `GROUP_HOME` environmental variable should in theory only exist on Sherlock and not on the Stanford GSB server
+
+
 if homedir() == "/Users/callende" # Paths Claudia Stanford Desktop
 
 
@@ -18,6 +20,7 @@ if homedir() == "/Users/callende" # Paths Claudia Stanford Desktop
 
 end
 
+const stemGit = pwd()
 print("Paths set for machine: ", split(homedir(), "/")[end])
 
 

@@ -1,4 +1,4 @@
-function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Estimation, Set, Params)
+function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Estimation, Set, Params, nargout)
 
     # Apply Normalization by Market x Year
     # if (DeltaM[SchoolsM.NormId .== 1] != 0)

@@ -1,4 +1,4 @@
-function RC_shares(DeltaM::AbstractVector{T}, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Estimation, Set, Theta2::AbstractVector{T}) where T
+function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Estimation, Set, Theta2)
 
     # Apply Normalization by Market x Year
     # if (DeltaM[SchoolsM.NormId .== 1] != 0)

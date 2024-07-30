@@ -1,3 +1,5 @@
+using LinearAlgebra
+include("./elementwise.jl")
 function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Estimation, Set, Params, nargout)
 
     # Apply Normalization by Market x Year
@@ -68,15 +70,7 @@ function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Es
 
         if nargout > 3
             if size(SchoolsM, 1) < 1400
-                println(size(permutedims(-share_ijv[1, type], (1, 3, 2))))
-                println(size( diagm(vec(Params[:w][1, 1, :])) ))
-                println(size(permutedims(share_ijv[1, type], (3, 1, 2))))
-                println(size(reshape(CweightsMAll[:, type], 1, 1, :)))
-                dSdDelta += sum(
-                    (permutedims(-share_ijv[1, type], (1, 3, 2)) .* 
-                     diagm(vec(Params[:w][1, 1, :])) .* 
-                     permutedims(share_ijv[1, type], (3, 1, 2))) .* 
-                     reshape(CweightsMAll[:, type], 1, 1, :), dims=3)
+                dSdDelta += sum(mmx_mult(mmx_mult(permutedims(-share_ijv[1, type], (1, 3, 2)) ,diagm(vec(Params[:w][:, 1, :]))) , permutedims(share_ijv[1, type], (3, 1, 2))) .* reshape(CweightsMAll[:, type], 1, 1, :), dims=3)
             else
                 for n in 1:length(CweightsMTypes[:, type])
                     dSdDelta += -squeeze(share_ijv[1, type][:, n, :], (1, 2)) * 
@@ -84,15 +78,15 @@ function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Es
                                 squeeze(share_ijv[1, type][:, n, :], (1, 2))' * 
                                 CweightsMAll[n, type]
                 end
-            end# N=69 T=59  1=165
+            end
             
 
             if nargout > 4
                 if size(SchoolsM, 1) < 1400
                     for i in Estimation.TypesTheta[type, 1]
-                        if Estimation.ThetaMask[i, 2] == 1
-                            if Estimation.ThetaMask[i, 1] == 0
-                                dSdTheta[:, i] += squeeze(mmult((share_ijv[1, type] .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T"))), CweightsMAll[:, type])) * Params[:w][:, 1, :]
+                        if Estimation.ThetaMask[i][2] == 1
+                            if Estimation.ThetaMask[i][1] == 0
+                                dSdTheta[:, i] += squeeze(mmx_mult((share_ijv[1, type] .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T"))), CweightsMAll[:, type])) * Params[:w][:, 1, :]
                                 if nargout > 6
                                     dMo_dTheta[1 + (type - 1) * 5, i] = sum(mmult((share_ijv[1, type] .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T"))), SchoolsM.Mu', "T") .* CweightsMTypes[:, type])' * Params[:w][:, 1, :]
                                     dMo_dTheta[2 + (type - 1) * 5, i] = sum(mmult((share_ijv[1, type] .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T"))), SchoolsM.Price', "T") .* CweightsMTypes[:, type])' * Params[:w][:, 1, :]
@@ -100,18 +94,18 @@ function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Es
                                     dMo_dTheta[4 + (type - 1) * 5, i] = sum(mmult((share_ijv[1, type] .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T"))), SchoolsM.Ze[:, type]', "T") .* CweightsMTypes[:, type])' * Params[:w][:, 1, :]
                                     dMo_dTheta[5 + (type - 1) * 5, i] = sum(mmult((share_ijv[1, type] .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T"))), SchoolsM.Zy[:, type]', "T") .* CweightsMTypes[:, type])' * Params[:w][:, 1, :]
                                 end
-                            elseif Estimation.ThetaMask[i, 1] == 1
-                                dSdTheta[:, i] += squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T")), CweightsMAll[:, type])) * Params[:w][:, 1, :]
+                            elseif Estimation.ThetaMask[i][1] == 1
+                                dSdTheta[:, i] += squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T")), CweightsMAll[:, type])) * Params[:w][:, 1, :]
                                 if nargout > 6
-                                    dMo_dTheta[1 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T")), SchoolsM.Mu', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
-                                    dMo_dTheta[2 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T")), SchoolsM.Price', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
-                                    dMo_dTheta[3 + (type - 1) * 5, i] = sum(mmult(sum((bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T"))) .* DistanceM, dims=1), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
-                                    dMo_dTheta[4 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T")), SchoolsM.Ze[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
-                                    dMo_dTheta[5 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T")), SchoolsM.Zy[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[1 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T")), SchoolsM.Mu', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[2 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T")), SchoolsM.Price', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[3 + (type - 1) * 5, i] = sum(mmult(sum((bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T"))) .* DistanceM, dims=1), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[4 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T")), SchoolsM.Ze[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[5 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Mu .- mmult(SchoolsM.Mu, share_ijv[1, type], "T")), SchoolsM.Zy[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
                                 end
                             end
-                        elseif Estimation.ThetaMask[i, 2] == 2
-                            if Estimation.ThetaMask[i, 1] == 0
+                        elseif Estimation.ThetaMask[i][2] == 2
+                            if Estimation.ThetaMask[i][1] == 0
                                 dSdTheta[:, i] += squeeze(mmult((share_ijv[1, type] .* (SchoolsM.Price .- mmult(SchoolsM.Price, share_ijv[1, type], "T"))), CweightsMAll[:, type])) * Params[:w][:, 1, :]
                                 if nargout > 6
                                     dMo_dTheta[1 + (type - 1) * 5, i] = sum(mmult((share_ijv[1, type] .* (SchoolsM.Price .- mmult(SchoolsM.Price, share_ijv[1, type], "T"))), SchoolsM.Mu', "T") .* CweightsMTypes[:, type])' * Params[:w][:, 1, :]
@@ -121,8 +115,8 @@ function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Es
                                     dMo_dTheta[5 + (type - 1) * 5, i] = sum(mmult((share_ijv[1, type] .* (SchoolsM.Price .- mmult(SchoolsM.Price, share_ijv[1, type], "T"))), SchoolsM.Zy[:, type]', "T") .* CweightsMTypes[:, type])' * Params[:w][:, 1, :]
                                 end
                             end
-                        elseif Estimation.ThetaMask[i, 2] == 3
-                            if Estimation.ThetaMask[i, 1] == 0
+                        elseif Estimation.ThetaMask[i][2] == 3
+                            if Estimation.ThetaMask[i][1] == 0
                                 dSdTheta[:, i] += squeeze(mmult((share_ijv[1, type] .* (DistanceM .- sum((share_ijv[1, type] .* DistanceM), dims=1))), CweightsMAll[:, type])) * Params[:w][:, 1, :]
                                 if nargout > 6
                                     dMo_dTheta[1 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult((share_ijv[1, type] .* (DistanceM .- sum((share_ijv[1, type] .* DistanceM), dims=1))), SchoolsM.Mu', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
@@ -132,8 +126,8 @@ function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Es
                                     dMo_dTheta[5 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult((share_ijv[1, type] .* (DistanceM .- sum((share_ijv[1, type] .* DistanceM), dims=1))), SchoolsM.Zy[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
                                 end
                             end
-                        elseif Estimation.ThetaMask[i, 2] == 4
-                            if Estimation.ThetaMask[i, 1] == 0
+                        elseif Estimation.ThetaMask[i][2] == 4
+                            if Estimation.ThetaMask[i][1] == 0
                                 dSdTheta[:, i] += squeeze(mmult((share_ijv[1, type] .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T"))), CweightsMAll[:, type])) * Params[:w][:, 1, :]
                                 if nargout > 6
                                     dMo_dTheta[1 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult((share_ijv[1, type] .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T"))), SchoolsM.Mu', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
@@ -142,18 +136,18 @@ function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Es
                                     dMo_dTheta[4 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult((share_ijv[1, type] .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T"))), SchoolsM.Ze[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
                                     dMo_dTheta[5 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult((share_ijv[1, type] .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T"))), SchoolsM.Zy[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
                                 end
-                            elseif Estimation.ThetaMask[i, 1] == 1
+                            elseif Estimation.ThetaMask[i][1] == 1
                                 dSdTheta[:, i] += squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T")), CweightsMAll[:, type])) * Params[:w][:, 1, :]
                                 if nargout > 6
-                                    dMo_dTheta[1 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T")), SchoolsM.Mu', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
-                                    dMo_dTheta[2 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T")), SchoolsM.Price', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
-                                    dMo_dTheta[3 + (type - 1) * 5, i] = sum(mmult(squeeze(sum((bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T"))) .* DistanceM, dims=1)), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
-                                    dMo_dTheta[4 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T")), SchoolsM.Ze[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
-                                    dMo_dTheta[5 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T")), SchoolsM.Zy[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[1 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T")), SchoolsM.Mu', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[2 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T")), SchoolsM.Price', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[3 + (type - 1) * 5, i] = sum(mmult(squeeze(sum((bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T"))) .* DistanceM, dims=1)), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[4 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T")), SchoolsM.Ze[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[5 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Ze[:, type] .- mmult(SchoolsM.Ze[:, type], share_ijv[1, type], "T")), SchoolsM.Zy[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
                                 end
                             end
-                        elseif Estimation.ThetaMask[i, 2] == 5
-                            if Estimation.ThetaMask[i, 1] == 0
+                        elseif Estimation.ThetaMask[i][2] == 5
+                            if Estimation.ThetaMask[i][1] == 0
                                 dSdTheta[:, i] += squeeze(mmult((share_ijv[1, type] .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T"))), CweightsMAll[:, type])) * Params[:w][:, 1, :]
                                 if nargout > 6
                                     dMo_dTheta[1 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult((share_ijv[1, type] .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T"))), SchoolsM.Mu', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
@@ -162,14 +156,14 @@ function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Es
                                     dMo_dTheta[4 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult((share_ijv[1, type] .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T"))), SchoolsM.Ze[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
                                     dMo_dTheta[5 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult((share_ijv[1, type] .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T"))), SchoolsM.Zy[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
                                 end
-                            elseif Estimation.ThetaMask[i, 1] == 1
+                            elseif Estimation.ThetaMask[i][1] == 1
                                 dSdTheta[:, i] += squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T")), CweightsMAll[:, type])) * Params[:w][:, 1, :]
                                 if nargout > 6
-                                    dMo_dTheta[1 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T")), SchoolsM.Mu', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
-                                    dMo_dTheta[2 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T")), SchoolsM.Price', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
-                                    dMo_dTheta[3 + (type - 1) * 5, i] = sum(mmult(squeeze(sum((bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T"))) .* DistanceM, dims=1)), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
-                                    dMo_dTheta[4 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T")), SchoolsM.Ze[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
-                                    dMo_dTheta[5 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i, 3]], 1, 1, :)) .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T")), SchoolsM.Zy[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[1 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T")), SchoolsM.Mu', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[2 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T")), SchoolsM.Price', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[3 + (type - 1) * 5, i] = sum(mmult(squeeze(sum((bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T"))) .* DistanceM, dims=1)), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[4 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T")), SchoolsM.Ze[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
+                                    dMo_dTheta[5 + (type - 1) * 5, i] = sum(mmult(squeeze(mmult(bsxfun(*, share_ijv[1, type], reshape(Params[:dbetai][:, Estimation.ThetaMask[i][3]], 1, 1, :)) .* (SchoolsM.Zy[:, type] .- mmult(SchoolsM.Zy[:, type], share_ijv[1, type], "T")), SchoolsM.Zy[:, type]', "T")), CweightsMTypes[:, type]))' * Params[:w][:, 1, :]
                                 end
                             end
                         end

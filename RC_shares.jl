@@ -52,7 +52,7 @@ function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Es
         maxuij = maximum(DeltaM) + maximum(UoType) + maximum(Uv)
         num = exp.(DeltaM .+ UoType .+ Uv .- maxuij)
         share_ijv[1, type] = num ./ sum(num, dims=1)
-        share_ij = sum(share_ijv[1, type] .* Params[:w], dims=3)
+        share_ij = dropdims(sum(share_ijv[1, type] .* Params[:w], dims=3), dims=3)
         Shares[:, type] = sum(share_ij .* CweightsMTypes[:, type]', dims=2)
         S += sum(share_ij .* CweightsMAll[:, type]', dims=2)
 
@@ -68,12 +68,24 @@ function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Es
 
         if nargout > 3
             if size(SchoolsM, 1) < 1400
-                dSdDelta += sum(((permutedims(-share_ijv[1, type], (1, 3, 2)) .* diagm(Params[:w][:, 1, :])) .* permutedims(share_ijv[1, type], (3, 1, 2))) .* reshape(CweightsMAll[:, type], 1, 1, :), dims=3)
+                println(size(permutedims(-share_ijv[1, type], (1, 3, 2))))
+                println(size( diagm(vec(Params[:w][1, 1, :])) ))
+                println(size(permutedims(share_ijv[1, type], (3, 1, 2))))
+                println(size(reshape(CweightsMAll[:, type], 1, 1, :)))
+                dSdDelta += sum(
+                    (permutedims(-share_ijv[1, type], (1, 3, 2)) .* 
+                     diagm(vec(Params[:w][1, 1, :])) .* 
+                     permutedims(share_ijv[1, type], (3, 1, 2))) .* 
+                     reshape(CweightsMAll[:, type], 1, 1, :), dims=3)
             else
                 for n in 1:length(CweightsMTypes[:, type])
-                    dSdDelta += (-share_ijv[1, type][:, n, :] * diagm(Params[:w][:, 1, :]) * share_ijv[1, type][:, n, :]' * CweightsMAll[n, type])
+                    dSdDelta += -squeeze(share_ijv[1, type][:, n, :], (1, 2)) * 
+                                diagm(vec(Params[:w][1, 1, :])) * 
+                                squeeze(share_ijv[1, type][:, n, :], (1, 2))' * 
+                                CweightsMAll[n, type]
                 end
-            end
+            end# N=69 T=59  1=165
+            
 
             if nargout > 4
                 if size(SchoolsM, 1) < 1400

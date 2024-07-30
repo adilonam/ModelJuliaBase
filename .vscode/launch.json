@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Julia: Launch MainDemandLab.jl",
+            "type": "julia",
+            "request": "launch",
+            "program": "${workspaceFolder}/MainDemandLab.jl",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "juliaEnv": "${workspaceFolder}"
+        }
+    ]
+}

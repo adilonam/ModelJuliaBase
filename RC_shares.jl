@@ -42,12 +42,19 @@ function RC_shares(DeltaM, SchoolsM, DistanceM, CweightsMAll, CweightsMTypes, Es
             Uv = reshape(Uv, size(Uv, 1), 1, size(Uv, 2))
         end
 
+        # maxuij = maximum(DeltaM) + maximum(UoType) + maximum(Uv)
+        # num = exp.(DeltaM .+ UoType .+ Uv .- maxuij)
+        # share_ijv[1, type] = num ./ sum(num, dims=1)
+        # share_ij = dropdims(sum(share_ijv[1, type] .* Params[:w], dims=3), dims=3)
+        # Shares[:, type] = sum(share_ij .* CweightsMTypes[:, type]', dims=2)
+        # S += dropdims(sum(share_ij .* CweightsMAll[:, type]', dims=2),dims=3)
+
         maxuij = maximum(DeltaM) + maximum(UoType) + maximum(Uv)
         num = exp.(DeltaM .+ UoType .+ Uv .- maxuij)
         share_ijv[1, type] = num ./ sum(num, dims=1)
-        share_ij = dropdims(sum(share_ijv[1, type] .* Params[:w], dims=3), dims=3)
+        share_ij = sum(share_ijv[1, type] .* Params[:w], dims=3)
         Shares[:, type] = sum(share_ij .* CweightsMTypes[:, type]', dims=2)
-        S += dropdims(sum(share_ij .* CweightsMAll[:, type]', dims=2),dims=3)
+        S += sum(share_ij .* CweightsMAll[:, type]', dims=2)
 
         if nargout > 5
             if Set.model == "model 1"

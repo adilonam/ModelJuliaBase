@@ -1,4 +1,3 @@
-
 function mmx_mult(A, B)
     if ndims(A) == 1 && ndims(B) == 1
         # Dot product for two vectors (1D arrays)
@@ -39,3 +38,15 @@ function mmx_mult(A, B)
         throw(ArgumentError("Unsupported dimensions for multiplication"))
     end
 end
+
+# Example usage
+A_3d_2d = randn(71, 165, 65)
+B_2d = randn(165, 165) 
+C_3d_2d = mmx_mult(A_3d_2d, B_2d)
+println("Result of 3D (71, 165, 63) * 2D (165, 165) with 'tn': Size $(size(C_3d_2d))")
+
+# 3D (71, 165, 63) and 3D (165, 71, 63) with mod='tt'
+A_3d = randn(71, 165, 63)
+B_3d = randn(165, 71, 63)
+C_3d = mmx_mult(A_3d, B_3d)
+println("Result of 3D (71, 165, 63) * 3D (165, 71, 63) with 'tt': Size $(size(C_3d))")

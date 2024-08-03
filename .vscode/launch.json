@@ -5,7 +5,7 @@
             "name": "Julia: Launch MainDemandLab.jl",
             "type": "julia",
             "request": "launch",
-            "program": "${workspaceFolder}/MainDemandLab.jl",
+            "program": "${workspaceFolder}/test.jl",
             "args": [],
             "cwd": "${workspaceFolder}",
             "juliaEnv": "${workspaceFolder}"

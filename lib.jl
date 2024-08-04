@@ -4,11 +4,11 @@ function mmx_mult(A, B, mod::String="n")
 
     # Handle transpositions based on the 'mod' parameter
     if mod == "tn"
-        A_trans = A
-        B_trans = (dimsB == 2) ? transpose(B) : permutedims(B, (2, 1, 3))
-    elseif mod == "nt"
         A_trans = (dimsA == 3) ? permutedims(A, (2, 1, 3)) : transpose(A)
         B_trans = B
+    elseif mod == "nt" 
+        A_trans = A
+        B_trans = (dimsB == 2) ? transpose(B) : permutedims(B, (2, 1, 3))
     elseif mod == "tt"
         A_trans = (dimsA == 3) ? permutedims(A, (2, 1, 3)) : transpose(A)
         B_trans = (dimsB == 2) ? transpose(B) : permutedims(B, (2, 1, 3))
@@ -49,3 +49,19 @@ function mmx_mult(A, B, mod::String="n")
         throw(ArgumentError("Unsupported dimensions for multiplication"))
     end
 end
+
+
+
+
+function squeeze(a)
+    return dropdims(a, dims = tuple(findall(size(a) .== 1)...))
+end
+
+
+
+bsxfun(f, A, B) = broadcast(f, A, B)
+
+
+
+
+correct_data(A) = squeeze(mean(cat(A... , dims = 3), dims=(1, 2)))

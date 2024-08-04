@@ -30,21 +30,21 @@ function mmx_mult(A, B, mod::String="n")
     elseif ndims(A_trans) == 1 && ndims(B_trans) == 3
         return reshape(A_trans, 1, :) * B_trans
     elseif ndims(A_trans) == 3 && ndims(B_trans) == 1
-        return A_trans * reshape(B_trans, :, 1)
+        t = map(slice -> slice * reshape(B_trans, :, 1), eachslice(A_trans, dims=3))
+        stacked_t = cat(t..., dims=3)
+        return stacked_t
     elseif ndims(A_trans) == 2 && ndims(B_trans) == 3
-        return map(slice -> A_trans * slice, eachslice(B_trans, dims=3))
+        t = map(slice -> A_trans * slice, eachslice(B_trans, dims=3))
+        stacked_t = cat(t..., dims=3)
+        return stacked_t
     elseif ndims(A_trans) == 3 && ndims(B_trans) == 2
-        return map(slice -> slice * B_trans, eachslice(A_trans, dims=3))
+        t = map(slice -> slice * B_trans, eachslice(A_trans, dims=3))
+        stacked_t = cat(t..., dims=3)
+        return stacked_t
     elseif ndims(A_trans) == 3 && ndims(B_trans) == 3
-        if size(A_trans, 2) == size(B_trans, 1)
-            C = zeros(Float64, size(A_trans, 1), size(B_trans, 2), size(A_trans, 3))
-            for i in 1:size(A_trans, 3)
-                C[:, :, i] = A_trans[:, :, i] * B_trans[:, :, i]
-            end
-            return C
-        else
-            throw(DimensionMismatch("Dimensions of A and B are not compatible for 3D multiplication"))
-        end
+        t = map((Aslice, Bslice) -> Aslice * Bslice, eachslice(A_trans, dims=3), eachslice(B_trans, dims=3))
+        stacked_t = cat(t..., dims=3)
+        return stacked_t
     else
         throw(ArgumentError("Unsupported dimensions for multiplication"))
     end
